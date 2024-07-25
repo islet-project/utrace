@@ -1,0 +1,10 @@
+[package]
+name = "utrace_plugin"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+build = "../build.rs"
+
+[dependencies]
+utrace_common = { path = "../common" }

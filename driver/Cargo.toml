@@ -1,0 +1,12 @@
+[package]
+name = "utrace_driver"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+build = "../build.rs"
+
+[dependencies]
+clap = { version = "4.0", features = ["derive"] }
+dirs = "4.0"
+utrace_common = { path = "../common" }

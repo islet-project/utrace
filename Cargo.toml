@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "common",
+    "driver",
+    "plugin",
+]
+default-members = ["driver"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Islet Contributors"]
+edition = "2021"
