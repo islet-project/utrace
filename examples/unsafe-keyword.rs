@@ -56,4 +56,19 @@ macro_rules! create_unsafe_fn {
 
 create_unsafe_fn!(unsafe_macro_fn, macro_fn_unsafe_block);
 
+struct Closures(Vec<Box<dyn Fn()>>);
+
+fn hold_unsafe_closure() {
+    let mut closures = Closures(Vec::new());
+    closures.0.push(ret_unsafe_closure());
+}
+
+fn ret_unsafe_closure() -> Box<dyn Fn()> {
+    Box::new(|| {
+        unsafe {
+            println!("dummy in unsafe closure");
+        }
+    })
+}
+
 fn main() {}

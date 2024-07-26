@@ -7,8 +7,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use utrace_common::config;
+use utrace_common::UnsafeKind;
 use utrace_common::{Record, Records};
-use utrace_common::{UnsafeItem, UnsafeKind};
 
 pub struct Tracer {
     records: Records,
@@ -83,7 +83,7 @@ impl Tracer {
                     Self::print_items_count(&record);
 
                     if verbose {
-                        Self::print_items_list(record.items.clone());
+                        record.print_items_list();
                     }
 
                     if call_trace {
@@ -94,7 +94,7 @@ impl Tracer {
                 Self::print_items_count(&record);
 
                 if verbose {
-                    Self::print_items_list(record.items.clone());
+                    record.print_items_list();
                     Self::print_call_graph(&record.graph);
                 }
             }
@@ -120,13 +120,6 @@ impl Tracer {
             "{:<20} {:<10} {:<10} {:<10} {:<10}",
             record.krate, functions, blocks, impls, traits
         );
-    }
-
-    fn print_items_list(mut items: Vec<UnsafeItem>) {
-        items.sort_by(|a, b| a.kind.cmp(&b.kind).then_with(|| a.name.cmp(&b.name)));
-        for item in items {
-            println!("\tVERBOSE: {:?} - {}", item.kind, item.name);
-        }
     }
 
     fn print_call_graph(graph: &HashMap<String, Vec<String>>) {

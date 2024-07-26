@@ -63,6 +63,14 @@ impl Record {
         let reader = BufReader::new(file);
         Ok(serde_json::from_reader(reader)?)
     }
+
+    pub fn print_items_list(&self) {
+        let mut items = self.items.clone();
+        items.sort_by(|a, b| a.kind.cmp(&b.kind).then_with(|| a.name.cmp(&b.name)));
+        for item in items {
+            println!("\tVERBOSE: {:?} - {}", item.kind, item.name);
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -90,14 +98,6 @@ impl Records {
     }
 
     pub fn collect_items(&self) -> HashSet<String> {
-        /*
-        let mut items = HashSet::new();
-        for record in &self.0.iter() {
-            for item in &record.items {
-                items.insert(item.name.clone());
-            }
-        }
-        items*/
         self.0
             .iter()
             .flat_map(|record| record.items.iter().map(|item| item.name.clone()))
@@ -110,14 +110,6 @@ impl Records {
             .flat_map(|record| record.graph.iter())
             .map(|(key, value)| (key.clone(), value.clone()))
             .collect()
-        /*
-        let mut combined_graph = HashMap::new();
-        for record in &self.0 {
-            for (key, value) in &record.graph {
-                combined_graph.insert(key.clone(), value.clone());
-            }
-        }
-        combined_graph*/
     }
 }
 

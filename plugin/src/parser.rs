@@ -31,6 +31,7 @@ impl<'tcx> Parser<'tcx> {
     }
 
     pub fn save(&self) {
+        self.record.print_items_list();
         self.record.save(&utrace_common::config::out_dir()).unwrap();
     }
 }
@@ -126,6 +127,32 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
     }
 
     fn visit_expr(&mut self, expr: &'tcx Expr<'tcx>) {
+        if let ExprKind::Closure(c) = &expr.kind {
+            let body = self.tcx.hir().body(c.body);
+            self.visit_body(body);
+        }
+
+        if let ExprKind::Array(expr) = expr.kind {
+            /*
+                            let owner_id = self.tcx.hir().get_parent_item(expr.hir_id);
+                            let caller = self
+                                .tcx
+                                .def_path(owner_id.into())
+                                .to_string_no_crate_verbose();
+            */
+            println!("{:?}", expr);
+            /*
+            if let ExprKind::Call(_, args) = &element.kind {
+                for arg in args {
+                    if let ExprKind::Closure(_, body_id, _, _, _) = &arg.kind {
+                        let body = self.tcx.hir().body(*body_id);
+                        self.visit_body(body);
+                    }
+                }
+            }*/
+        }
+
+        // TODO: MethodCall
         if let ExprKind::Call(path_expr, _) = &expr.kind {
             if let ExprKind::Path(QPath::Resolved(_, path)) = &path_expr.kind {
                 if let Some(def_id) = path.res.opt_def_id() {

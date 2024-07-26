@@ -7,7 +7,6 @@ pub fn plugin_dir() -> String {
 }
 
 pub fn plugin_bin() -> String {
-    println!("utrace root {}", root_dir());
     format!("{}/target/release/utrace_plugin", root_dir())
 }
 
