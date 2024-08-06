@@ -31,7 +31,10 @@ impl<'tcx> Parser<'tcx> {
     }
 
     pub fn save(&self) {
-        self.record.print_items_list();
+        // debug
+        //        self.record.print_items_list();
+        //        self.record.print_call_graph();
+        //
         self.record.save(&utrace_common::config::out_dir()).unwrap();
     }
 }
@@ -90,14 +93,17 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
             _ => return,
         };
 
+        let def_path = self.tcx.def_path(id.to_def_id());
+        let mut fn_name = def_path.to_string_no_crate_verbose();
+        if fn_name.contains("impl") {
+            fn_name = format!("::{}", self.tcx.def_path_str(id));
+        };
+
         if header.unsafety == Unsafety::Unsafe {
-            let def_path = self.tcx.def_path(id.to_def_id());
-            let mut fn_name = def_path.to_string_no_crate_verbose();
-            if fn_name.contains("impl") {
-                fn_name = format!("::{}", self.tcx.def_path_str(id));
-            };
-            self.record.add_item(UnsafeKind::Function, fn_name);
+            self.record.add_item(UnsafeKind::Function, fn_name.clone());
         }
+
+        self.record.add_edge(fn_name, String::new());
 
         intravisit::walk_fn(self, fk, fd, b, id);
     }
@@ -132,26 +138,6 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
             self.visit_body(body);
         }
 
-        if let ExprKind::Array(expr) = expr.kind {
-            /*
-                            let owner_id = self.tcx.hir().get_parent_item(expr.hir_id);
-                            let caller = self
-                                .tcx
-                                .def_path(owner_id.into())
-                                .to_string_no_crate_verbose();
-            */
-            println!("{:?}", expr);
-            /*
-            if let ExprKind::Call(_, args) = &element.kind {
-                for arg in args {
-                    if let ExprKind::Closure(_, body_id, _, _, _) = &arg.kind {
-                        let body = self.tcx.hir().body(*body_id);
-                        self.visit_body(body);
-                    }
-                }
-            }*/
-        }
-
         // TODO: MethodCall
         if let ExprKind::Call(path_expr, _) = &expr.kind {
             if let ExprKind::Path(QPath::Resolved(_, path)) = &path_expr.kind {
@@ -173,6 +159,24 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
                     self.record.add_edge(caller, callee);
                 }
             }
+        }
+
+        // To resolve the called method to a DefId,
+        // call type_dependent_def_id with the hir_id of the MethodCall node itself.
+        if let ExprKind::MethodCall(_, _, _, _) = &expr.kind {
+            let owner_id = expr.hir_id.owner.def_id;
+            let def_id = self
+                .tcx
+                .typeck(owner_id)
+                .type_dependent_def_id(expr.hir_id)
+                .unwrap();
+            let def_path = self.tcx.def_path(def_id);
+            let method_name = self.tcx.def_path_str(def_id);
+            let crate_name = self.tcx.crate_name(def_path.krate).to_string();
+            let callee = format!("{}::{}", crate_name, method_name);
+
+            let caller = format!("::{}", self.tcx.def_path_str(owner_id));
+            self.record.add_edge(caller, callee);
         }
 
         intravisit::walk_expr(self, expr);

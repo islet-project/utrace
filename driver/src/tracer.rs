@@ -1,30 +1,16 @@
 use crate::utils::expand_tilde;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use utrace_common::config;
 use utrace_common::UnsafeKind;
 use utrace_common::{Record, Records};
 
-pub struct Tracer {
-    records: Records,
-    unsafe_items: HashSet<String>,
-    call_graph: HashMap<String, Vec<String>>,
-}
+pub struct Tracer;
 
 impl Tracer {
-    pub fn new() -> Self {
-        Self {
-            records: Records::new(),
-            unsafe_items: HashSet::new(),
-            call_graph: HashMap::new(),
-        }
-    }
-
     pub fn run(&mut self, path: &PathBuf) {
         let target_dir = expand_tilde(&path.as_path());
         let target_dir = fs::canonicalize(&target_dir).expect("Failed to get the absosulte path.");
@@ -51,33 +37,17 @@ impl Tracer {
             .arg("build")
             .status()
             .expect("Failed to utrace.");
-
-        self.load().expect("Failed to read records.");
-
-        self.unsafe_items = self.records.collect_items();
-        self.call_graph = self.records.collect_graph();
-    }
-
-    fn load(&mut self) -> io::Result<()> {
-        let out_dir = config::out_dir();
-        let out_dir = Path::new(&out_dir);
-
-        for entry in fs::read_dir(&out_dir)? {
-            let entry = entry?;
-            self.records
-                .add(Record::load(entry.path().to_str().unwrap())?);
-        }
-
-        Ok(())
     }
 
     pub fn report(&self, filter: &Option<String>, verbose: bool, call_trace: bool) {
+        let records = Records::load().expect("Failed to read records.");
+
         println!(
             "{:<20} {:<10} {:<10} {:<10} {:<10}",
             "Crate", "Functions", "Blocks", "Impls", "Traits"
         );
 
-        for record in &self.records {
+        for record in &records {
             if let Some(krate) = filter {
                 if krate == &record.krate {
                     Self::print_items_count(&record);
@@ -87,7 +57,7 @@ impl Tracer {
                     }
 
                     if call_trace {
-                        self.call_trace(&self.call_graph, &record.graph);
+                        self.call_trace(&records.call_graph, &record.graph);
                     }
                 }
             } else {
@@ -95,7 +65,7 @@ impl Tracer {
 
                 if verbose {
                     record.print_items_list();
-                    Self::print_call_graph(&record.graph);
+                    //                    record.print_call_graph();
                 }
             }
         }
@@ -122,21 +92,14 @@ impl Tracer {
         );
     }
 
-    fn print_call_graph(graph: &HashMap<String, Vec<String>>) {
-        for (caller, callees) in graph {
-            println!("{} calls:", caller);
-            for callee in callees {
-                println!("  - {}", callee);
-            }
-        }
-    }
-
     pub fn check_unsafe(&self, item: &str) -> String {
+        item.to_string()
+        /* XXX.
         if self.unsafe_items.contains(item) {
             format!("{} (unsafe)", item)
         } else {
             item.to_string()
-        }
+        }*/
     }
 
     pub fn call_trace(

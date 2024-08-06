@@ -61,6 +61,8 @@ struct Closures(Vec<Box<dyn Fn()>>);
 fn hold_unsafe_closure() {
     let mut closures = Closures(Vec::new());
     closures.0.push(ret_unsafe_closure());
+    closures.0.clear();
+    Foo.method_has_unsafe_block(); 
 }
 
 fn ret_unsafe_closure() -> Box<dyn Fn()> {

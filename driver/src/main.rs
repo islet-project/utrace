@@ -16,7 +16,7 @@ fn main() {
         return;
     }
 
-    let mut tracer = Tracer::new();
+    let mut tracer = Tracer;
     if args.utrace.is_none() {
         println!("Provide the crate path to trace unsafe.");
         return;

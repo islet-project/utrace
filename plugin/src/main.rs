@@ -8,6 +8,8 @@ extern crate rustc_span;
 
 mod parser;
 
+use utrace_common::Records;
+
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::{interface::Compiler, Queries};
 
@@ -26,6 +28,11 @@ impl Callbacks for Plugin {
             parser.run();
             parser.save();
         });
+
+        // Debug
+        let records = Records::load().unwrap();
+        records.print_items_list();
+        records.print_call_graph();
 
         Compilation::Continue
     }
