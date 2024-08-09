@@ -73,4 +73,8 @@ fn ret_unsafe_closure() -> Box<dyn Fn()> {
     })
 }
 
+fn safe_funtion() {
+
+}
+
 fn main() {}

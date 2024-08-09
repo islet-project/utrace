@@ -6,7 +6,7 @@ init:
 	cd $(ROOT)/driver && cargo run -- --init
 
 run:
-	cd $(ROOT)/driver && cargo run -- --utrace=~/islet/rmm --filter=islet_rmm --verbose
+	cd $(ROOT)/driver && cargo run -- --utrace=~/islet/rmm --filter=islet_rmm --verbose --call-trace
 
 .PHONY: example
 

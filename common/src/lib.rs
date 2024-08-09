@@ -1,8 +1,8 @@
 pub mod config;
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
-use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter};
 use std::path::Path;
@@ -31,7 +31,7 @@ impl UnsafeItem {
 pub struct Record {
     pub krate: String,
     pub items: Vec<UnsafeItem>,
-    pub graph: HashMap<String, Vec<String>>,
+    pub graph: BTreeMap<String, Vec<String>>,
 }
 
 impl Record {
@@ -39,7 +39,7 @@ impl Record {
         Self {
             krate,
             items: Vec::new(),
-            graph: HashMap::new(),
+            graph: BTreeMap::new(),
         }
     }
 
@@ -79,9 +79,12 @@ impl Record {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Records {
+    // per crate
     raw_data: Vec<Record>,
+
+    // all deps
     unsafe_list: BTreeSet<String>,
-    pub call_graph: HashMap<String, Vec<String>>,
+    pub call_graph: BTreeMap<String, Vec<String>>,
 }
 
 impl Records {
@@ -150,34 +153,49 @@ impl Records {
         }
     }
 
-    /*
-    pub fn save(&self, path: &str) -> io::Result<()> {
-        let file = File::create(path)?;
-        let writer = BufWriter::new(file);
-        Ok(serde_json::to_writer(writer, self)?)
+    pub fn print_call_trace(&self, krate: Option<&str>) {
+        println!("Unsafe Call Trace");
+        let all_deps = &self.call_graph;
+        let krate = krate.unwrap_or("");
+        let target = self
+            .raw_data
+            .iter()
+            .find(|record| record.krate == krate)
+            .map(|record| &record.graph);
+        let target = target.unwrap_or(all_deps);
+
+        for caller in target.keys() {
+            println!("{:indent$}- {}", "", self.check_unsafe(caller), indent = 0);
+            self.visit_callee(&all_deps, &target, caller, 1);
+        }
     }
 
-    pub fn load(path: &str) -> io::Result<Self> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-        Ok(serde_json::from_reader(reader)?)
-    }*/
+    fn visit_callee(
+        &self,
+        all: &BTreeMap<String, Vec<String>>,
+        sub: &BTreeMap<String, Vec<String>>,
+        caller: &str,
+        depth: usize,
+    ) {
+        if let Some(callees) = all.get(caller) {
+            let mut iter = callees.iter().peekable();
+            while let Some(callee) = iter.next() {
+                if !callee.is_empty() {
+                    println!(
+                        "{:indent$}- {}",
+                        "",
+                        self.check_unsafe(callee),
+                        indent = depth * 4
+                    );
 
-    /*
-    pub fn collect_items(&self) -> HashSet<String> {
-        self.0
-            .iter()
-            .flat_map(|record| record.items.iter().map(|item| item.name.clone()))
-            .collect()
+                    if all.contains_key(callee) {
+                        let caller = callee;
+                        self.visit_callee(all, sub, caller, depth + 1);
+                    }
+                }
+            }
+        }
     }
-
-    pub fn collect_graph(&self) -> HashMap<String, Vec<String>> {
-        self.0
-            .iter()
-            .flat_map(|record| record.graph.iter())
-            .map(|(key, value)| (key.clone(), value.clone()))
-            .collect()
-    }*/
 }
 
 impl<'a> IntoIterator for &'a Records {

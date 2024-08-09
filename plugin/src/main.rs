@@ -32,7 +32,7 @@ impl Callbacks for Plugin {
         // Debug
         let records = Records::load().unwrap();
         records.print_items_list();
-        records.print_call_graph();
+        records.print_call_trace(None);
 
         Compilation::Continue
     }

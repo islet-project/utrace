@@ -1,6 +1,5 @@
 use crate::utils::expand_tilde;
 
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -57,7 +56,7 @@ impl Tracer {
                     }
 
                     if call_trace {
-                        self.call_trace(&records.call_graph, &record.graph);
+                        records.print_call_trace(Some(krate));
                     }
                 }
             } else {
@@ -90,63 +89,5 @@ impl Tracer {
             "{:<20} {:<10} {:<10} {:<10} {:<10}",
             record.krate, functions, blocks, impls, traits
         );
-    }
-
-    pub fn check_unsafe(&self, item: &str) -> String {
-        item.to_string()
-        /* XXX.
-        if self.unsafe_items.contains(item) {
-            format!("{} (unsafe)", item)
-        } else {
-            item.to_string()
-        }*/
-    }
-
-    pub fn call_trace(
-        &self,
-        all: &HashMap<String, Vec<String>>,
-        sub: &HashMap<String, Vec<String>>,
-    ) {
-        for caller in sub.keys() {
-            println!("{:indent$}{}", "", self.check_unsafe(caller), indent = 0);
-            self.visit_graph(&all, &sub, caller, 1);
-            println!("");
-        }
-    }
-
-    fn visit_graph(
-        &self,
-        all: &HashMap<String, Vec<String>>,
-        sub: &HashMap<String, Vec<String>>,
-        node: &str,
-        depth: usize,
-    ) {
-        if let Some(callees) = all.get(node) {
-            let mut iter = callees.iter().peekable();
-            while let Some(callee) = iter.next() {
-                if depth == 1 {
-                    println!("├── {}", callee);
-                } else {
-                    if iter.peek().is_some() {
-                        println!(
-                            "│ {:indent$}├── {}",
-                            "",
-                            self.check_unsafe(callee),
-                            indent = (depth - 1) * 4
-                        );
-                    } else {
-                        println!(
-                            "│ {:indent$}└── {}",
-                            "",
-                            self.check_unsafe(callee),
-                            indent = (depth - 1) * 4
-                        );
-                    }
-                }
-                if all.contains_key(callee) {
-                    self.visit_graph(all, sub, callee, depth + 1);
-                }
-            }
-        }
     }
 }
