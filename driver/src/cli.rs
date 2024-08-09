@@ -13,8 +13,8 @@ pub struct Cli {
     #[arg(short, long)]
     pub verbose: bool,
 
-    #[arg(short, long)]
-    pub filter: Option<String>,
+    #[arg(short, long, value_delimiter = ',')]
+    pub filter: Option<Vec<String>>,
 
     #[arg(short, long)]
     pub call_trace: bool,

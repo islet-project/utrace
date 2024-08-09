@@ -8,8 +8,6 @@ extern crate rustc_span;
 
 mod parser;
 
-use utrace_common::Records;
-
 use rustc_driver::{Callbacks, Compilation};
 use rustc_interface::{interface::Compiler, Queries};
 
@@ -29,11 +27,6 @@ impl Callbacks for Plugin {
             parser.save();
         });
 
-        // Debug
-        let records = Records::load().unwrap();
-        records.print_items_list();
-        records.print_call_trace(None);
-
         Compilation::Continue
     }
 }
@@ -43,4 +36,10 @@ fn main() {
     rustc_driver::RunCompiler::new(&args, &mut Plugin)
         .run()
         .unwrap();
+
+    #[cfg(debug_assertions)]
+    {
+        use utrace_common::report;
+        report(Some(vec!["unsafe_keyword".to_string()]), true, true);
+    }
 }

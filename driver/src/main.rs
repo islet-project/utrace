@@ -4,9 +4,9 @@ mod tracer;
 mod utils;
 
 use crate::cli::Cli;
-use crate::tracer::Tracer;
 
 use clap::Parser;
+use utrace_common::report;
 
 fn main() {
     let args = Cli::parse();
@@ -16,12 +16,14 @@ fn main() {
         return;
     }
 
-    let mut tracer = Tracer;
     if args.utrace.is_none() {
         println!("Provide the crate path to trace unsafe.");
         return;
     }
 
-    tracer.run(&args.utrace.unwrap());
-    tracer.report(&args.filter, args.verbose, args.call_trace);
+    let filter = args
+        .filter
+        .map(|f| f.into_iter().map(|s| s.trim().to_string()).collect());
+    tracer::run(&args.utrace.unwrap());
+    report(filter, args.verbose, args.call_trace);
 }

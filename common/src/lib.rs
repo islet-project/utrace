@@ -1,6 +1,7 @@
 pub mod config;
 
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fs::{self, File};
@@ -15,7 +16,7 @@ pub enum UnsafeKind {
     Impl,
 }
 
-#[derive(Serialize, Deserialize, Debug, Hash, Eq, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, Hash, Eq, Clone)]
 pub struct UnsafeItem {
     pub kind: UnsafeKind,
     pub name: String,
@@ -27,10 +28,28 @@ impl UnsafeItem {
     }
 }
 
+impl Ord for UnsafeItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
+impl PartialOrd for UnsafeItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for UnsafeItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Record {
     pub krate: String,
-    pub items: Vec<UnsafeItem>,
+    pub items: BTreeSet<UnsafeItem>,
     pub graph: BTreeMap<String, Vec<String>>,
 }
 
@@ -38,14 +57,16 @@ impl Record {
     pub fn new(krate: String) -> Self {
         Self {
             krate,
-            items: Vec::new(),
+            items: BTreeSet::new(),
             graph: BTreeMap::new(),
         }
     }
 
     pub fn add_item(&mut self, kind: UnsafeKind, name: String) {
-        self.items
-            .push(UnsafeItem::new(kind, format!("{}{}", self.krate, name)));
+        self.items.insert(UnsafeItem::new(
+            kind,
+            format!("{}{}", self.krate, name.trim()),
+        ));
     }
 
     pub fn add_edge(&mut self, caller: String, callee: String) {
@@ -66,14 +87,39 @@ impl Record {
         Ok(serde_json::from_reader(reader)?)
     }
 
-    pub fn print_items_list(&self) {
-        println!("Unsafe Item List");
-        let mut items = self.items.clone();
+    fn print_items_list(&self) {
+        println!("## Unsafe Item List ({})", self.krate);
 
-        items.sort_by(|a, b| a.kind.cmp(&b.kind).then_with(|| a.name.cmp(&b.name)));
+        let items: BTreeSet<_> = self
+            .items
+            .iter()
+            .map(|item| format!("type: {:?}, id: {}", item.kind, item.name))
+            .collect();
+
         for item in items {
-            println!("\t{:?} - {}", item.kind, item.name);
+            println!("- {}", item);
         }
+    }
+
+    fn print_items_count(&self) {
+        let mut functions = 0;
+        let mut blocks = 0;
+        let mut impls = 0;
+        let mut traits = 0;
+
+        for item in &self.items {
+            match item.kind {
+                UnsafeKind::Function => functions += 1,
+                UnsafeKind::Block => blocks += 1,
+                UnsafeKind::Impl => impls += 1,
+                UnsafeKind::Trait => traits += 1,
+            }
+        }
+
+        println!(
+            "{:<20} {:<10} {:<10} {:<10} {:<10}",
+            self.krate, functions, blocks, impls, traits
+        );
     }
 }
 
@@ -116,36 +162,7 @@ impl Records {
         })
     }
 
-    pub fn print_items_list(&self) {
-        println!("Unsafe Item List");
-        for per_krate in &self.raw_data {
-            let mut items = per_krate.items.clone();
-
-            items.sort_by(|a, b| a.kind.cmp(&b.kind).then_with(|| a.name.cmp(&b.name)));
-            for item in items {
-                println!("\t{:?} - {}", item.kind, item.name);
-            }
-        }
-    }
-
-    pub fn print_call_graph(&self) {
-        println!("Unsafe Call Graph");
-        let mut sorted_keys: Vec<_> = self.call_graph.keys().collect();
-        sorted_keys.sort();
-
-        for key in sorted_keys {
-            println!("\t{}", self.check_unsafe(key));
-            if let Some(values) = self.call_graph.get(key) {
-                for value in values {
-                    if !value.is_empty() {
-                        println!("\t└─ {}", self.check_unsafe(value));
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn check_unsafe(&self, item: &str) -> String {
+    fn check_unsafe(&self, item: &str) -> String {
         if self.unsafe_list.contains(item) {
             format!("{} (unsafe)", item)
         } else {
@@ -153,10 +170,9 @@ impl Records {
         }
     }
 
-    pub fn print_call_trace(&self, krate: Option<&str>) {
-        println!("Unsafe Call Trace");
+    pub fn print_call_trace(&self, krate: &str) {
+        println!("## Unsafe Call Trace");
         let all_deps = &self.call_graph;
-        let krate = krate.unwrap_or("");
         let target = self
             .raw_data
             .iter()
@@ -196,6 +212,40 @@ impl Records {
             }
         }
     }
+
+    pub fn print_unsafe_list(&self, filter: Option<Vec<String>>) {
+        for record in &self.raw_data {
+            if let Some(ref krates) = filter {
+                for krate in krates {
+                    if *krate == record.krate {
+                        record.print_items_list();
+                    }
+                }
+            } else {
+                record.print_items_list();
+            }
+        }
+    }
+
+    pub fn summary(&self, filter: Option<Vec<String>>) {
+        println!("## Summary");
+        println!(
+            "{:<20} {:<10} {:<10} {:<10} {:<10}",
+            "Crate", "Functions", "Blocks", "Impls", "Traits"
+        );
+
+        for record in &self.raw_data {
+            if let Some(ref krates) = filter {
+                for krate in krates {
+                    if *krate == record.krate {
+                        record.print_items_count();
+                    }
+                }
+            } else {
+                record.print_items_count();
+            }
+        }
+    }
 }
 
 impl<'a> IntoIterator for &'a Records {
@@ -204,5 +254,29 @@ impl<'a> IntoIterator for &'a Records {
 
     fn into_iter(self) -> Self::IntoIter {
         (&self.raw_data).into_iter()
+    }
+}
+
+pub fn report(filter: Option<Vec<String>>, verbose: bool, call_trace: bool) {
+    let records = Records::load().expect("Failed to read records.");
+
+    records.summary(filter.clone());
+
+    if verbose {
+        println!("");
+        records.print_unsafe_list(filter.clone());
+    }
+
+    if call_trace {
+        println!("");
+        for record in &records {
+            if let Some(ref krates) = filter {
+                for krate in krates {
+                    if *krate == record.krate {
+                        records.print_call_trace(krate);
+                    }
+                }
+            }
+        }
     }
 }

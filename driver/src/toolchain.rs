@@ -30,7 +30,6 @@ pub fn install() {
     let plugin_bin = Path::new(&plugin_bin);
     let target_bin = Path::new(&bin_dir).join("rustc");
 
-    println!("{:?}", plugin_bin);
     fs::copy(&plugin_bin, &target_bin).expect("Failed to copy a plugin.");
 
     // lib
