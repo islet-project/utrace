@@ -16,7 +16,7 @@ pub enum UnsafeKind {
     Impl,
 }
 
-#[derive(Serialize, Deserialize, Debug, Hash, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, Eq, Clone)]
 pub struct UnsafeItem {
     pub kind: UnsafeKind,
     pub name: String,
@@ -139,7 +139,7 @@ impl Records {
         let out_dir = config::out_dir();
         let out_dir = Path::new(&out_dir);
 
-        for entry in fs::read_dir(&out_dir)? {
+        for entry in fs::read_dir(out_dir)? {
             let entry = entry?;
             raw_data.push(Record::load(entry.path().to_str().unwrap())?);
         }
@@ -182,20 +182,14 @@ impl Records {
 
         for caller in target.keys() {
             println!("{:indent$}- {}", "", self.check_unsafe(caller), indent = 0);
-            self.visit_callee(&all_deps, &target, caller, 1);
+            self.visit_callee(all_deps, caller, 1);
         }
     }
 
-    fn visit_callee(
-        &self,
-        all: &BTreeMap<String, Vec<String>>,
-        sub: &BTreeMap<String, Vec<String>>,
-        caller: &str,
-        depth: usize,
-    ) {
-        if let Some(callees) = all.get(caller) {
-            let mut iter = callees.iter().peekable();
-            while let Some(callee) = iter.next() {
+    fn visit_callee(&self, graph: &BTreeMap<String, Vec<String>>, caller: &str, depth: usize) {
+        if let Some(callees) = graph.get(caller) {
+            let iter = callees.iter().peekable();
+            for callee in iter {
                 if !callee.is_empty() {
                     println!(
                         "{:indent$}- {}",
@@ -204,9 +198,9 @@ impl Records {
                         indent = depth * 4
                     );
 
-                    if all.contains_key(callee) {
+                    if graph.contains_key(callee) {
                         let caller = callee;
-                        self.visit_callee(all, sub, caller, depth + 1);
+                        self.visit_callee(graph, caller, depth + 1);
                     }
                 }
             }
@@ -253,7 +247,7 @@ impl<'a> IntoIterator for &'a Records {
     type IntoIter = <&'a Vec<Record> as IntoIterator>::IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.raw_data).into_iter()
+        self.raw_data.iter()
     }
 }
 
@@ -263,12 +257,12 @@ pub fn report(filter: Option<Vec<String>>, verbose: bool, call_trace: bool) {
     records.summary(filter.clone());
 
     if verbose {
-        println!("");
+        println!();
         records.print_unsafe_list(filter.clone());
     }
 
     if call_trace {
-        println!("");
+        println!();
         for record in &records {
             if let Some(ref krates) = filter {
                 for krate in krates {

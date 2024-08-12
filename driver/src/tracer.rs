@@ -2,21 +2,21 @@ use crate::utils::expand_tilde;
 
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
-pub fn run(path: &PathBuf) {
-    let target_dir = expand_tilde(&path.as_path());
-    let target_dir = fs::canonicalize(&target_dir).expect("Failed to get the absosulte path.");
-    env::set_current_dir(&target_dir).expect("Failed to change dir to plugin.");
+pub fn run(path: &Path) {
+    let target_dir = expand_tilde(path);
+    let target_dir = fs::canonicalize(target_dir).expect("Failed to get the absosulte path.");
+    env::set_current_dir(target_dir).expect("Failed to change dir to plugin.");
 
     let out_dir = utrace_common::config::out_dir();
     let path = Path::new(&out_dir);
     if path.exists() {
-        fs::remove_dir_all(&path).unwrap();
-        fs::create_dir_all(&path).unwrap();
+        fs::remove_dir_all(path).unwrap();
+        fs::create_dir_all(path).unwrap();
     } else {
-        fs::create_dir_all(&path).unwrap();
+        fs::create_dir_all(path).unwrap();
     }
 
     Command::new("cargo")

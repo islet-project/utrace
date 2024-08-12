@@ -9,7 +9,7 @@ use utrace_common::config;
 pub fn build() {
     let plugin_dir = config::plugin_dir();
     let plugin_dir = Path::new(&plugin_dir);
-    env::set_current_dir(&plugin_dir).expect("Failed to change dir to plugin.");
+    env::set_current_dir(plugin_dir).expect("Failed to change dir to plugin.");
 
     Command::new("cargo")
         .arg("build")
@@ -30,7 +30,7 @@ pub fn install() {
     let plugin_bin = Path::new(&plugin_bin);
     let target_bin = Path::new(&bin_dir).join("rustc");
 
-    fs::copy(&plugin_bin, &target_bin).expect("Failed to copy a plugin.");
+    fs::copy(plugin_bin, target_bin).expect("Failed to copy a plugin.");
 
     // lib
     let sysroot = Command::new("rustc")
@@ -46,7 +46,7 @@ pub fn install() {
         fs::create_dir_all(&bin_dir).expect("Failed to create toolchain/lib dir.");
     }
 
-    copy_dir(&sysroot_lib, lib_dir).unwrap();
+    copy_dir(sysroot_lib, lib_dir).unwrap();
 
     // link
     Command::new("rustup")
