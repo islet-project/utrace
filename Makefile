@@ -4,6 +4,7 @@ CRATE_NAME ?= "islet_rmm, fvp, vmsa, uart"
 
 .PHONY: init
 init:
+	cd $(ROOT) && rustup component add rust-src rustc-dev llvm-tools-preview
 	cd $(ROOT)/driver && cargo run --release -- --init
 
 .PHONY: summary
