@@ -3,3 +3,5 @@
 out/
 target/
 toolchain/
+
+plugin/unsafe-keyword

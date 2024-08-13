@@ -26,3 +26,7 @@ call-trace:
 example:
 	cd $(ROOT)/out && rm -rf *
 	cd $(ROOT)/plugin && cargo run ../examples/unsafe-keyword.rs
+
+.PHONY: clean
+clean:
+	cd $(ROOT) && cargo clean && rm -rf ./out

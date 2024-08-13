@@ -7,7 +7,10 @@ pub fn plugin_dir() -> String {
 }
 
 pub fn plugin_bin() -> String {
-    format!("{}/target/release/utrace_plugin", root_dir())
+    format!(
+        "{}/target/x86_64-unknown-linux-gnu/release/utrace_plugin",
+        root_dir()
+    )
 }
 
 pub fn toolchain_dir() -> String {
