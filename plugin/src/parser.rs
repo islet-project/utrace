@@ -5,7 +5,7 @@ use rustc_hir::intravisit::{self, FnKind, Visitor};
 use rustc_hir::BlockCheckMode::UnsafeBlock;
 use rustc_hir::{
     Block, BodyId, Expr, ExprKind, FnDecl, ImplItem, Item, ItemKind, QPath, TraitFn, TraitItem,
-    UnsafeSource, Unsafety,
+    UnsafeSource, Safety,
 };
 use rustc_middle::ty::TyCtxt;
 use rustc_span::def_id;
@@ -69,7 +69,7 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
             }
 
             if let TraitFn::Required(_) = trait_fn {
-                if fn_sig.header.unsafety == Unsafety::Unsafe {
+                if fn_sig.header.safety == Safety::Unsafe {
                     let def_path = self.tcx.def_path(item.owner_id.to_def_id());
                     let fn_name = def_path.to_string_no_crate_verbose();
                     self.record.add_item(UnsafeKind::Function, fn_name);
@@ -99,7 +99,7 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
             fn_name = format!("::{}", self.tcx.def_path_str(id));
         };
 
-        if header.unsafety == Unsafety::Unsafe {
+        if header.safety == Safety::Unsafe {
             self.record.add_item(UnsafeKind::Function, fn_name.clone());
         }
 
@@ -114,8 +114,8 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
             self.visit_body(body);
         }
 
-        if let ItemKind::Trait(_, unsafety, _, _, _) = &item.kind {
-            if *unsafety == Unsafety::Unsafe {
+        if let ItemKind::Trait(_, safety, _, _, _) = &item.kind {
+            if *safety == Safety::Unsafe {
                 let def_path = self.tcx.def_path(item.owner_id.to_def_id());
                 let trait_name = def_path.to_string_no_crate_verbose();
                 self.record.add_item(UnsafeKind::Trait, trait_name);
@@ -123,7 +123,7 @@ impl<'tcx> Visitor<'tcx> for Parser<'tcx> {
         }
 
         if let ItemKind::Impl(ref_) = &item.kind {
-            if ref_.unsafety == Unsafety::Unsafe {
+            if ref_.safety == Safety::Unsafe {
                 let impl_name = format!("::{}", self.tcx.def_path_str(item.owner_id));
                 self.record.add_item(UnsafeKind::Impl, impl_name);
             }

@@ -24,6 +24,7 @@ call-trace:
 
 .PHONY: example
 example:
+	mkdir -p $(ROOT)/out
 	cd $(ROOT)/out && rm -rf *
 	cd $(ROOT)/plugin && cargo run ../examples/unsafe-keyword.rs
 
